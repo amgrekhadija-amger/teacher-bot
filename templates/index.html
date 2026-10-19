@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد الأستاذ الذكي</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: #e5ddd5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            height: 90vh;
+            background: #f0f0f0;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background-color: #075e54;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .bot-message {
+            background: white;
+            align-self: flex-start;
+            border-top-right-radius: 0;
+            color: #333;
+        }
+        .user-message {
+            background: #dcf8c6;
+            align-self: flex-end;
+            border-top-left-radius: 0;
+            color: #333;
+        }
+        .chat-input-area {
+            background: #f0f0f0;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-top: 1px solid #ddd;
+        }
+        .chat-input-area input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            🤖 مساعد الأستاذ الذكي (Gemini)
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                مرحباً أستاذ! أرسل لي صور الدرس وسأقوم بتحويلها وترتيبها إلى ملفات Word و PDF فوراً.
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <!-- زر إرفاق الصور -->
+            <input type="file" id="imageInput" multiple accept="image/*" style="display: none;" onchange="handleImages()">
+            <button class="action-btn" onclick="document.getElementById('imageInput').click()" title="إرفاق صور">📎</button>
+            
+            <input type="text" id="userInput" placeholder="اكتب تعليقاً أو أرسل الصور...">
+            <button class="action-btn" onclick="sendMessage()" title="إرسال">إرسال ➔</button>
+        </div>
+    </div>
+
+    <script>
+        function handleImages() {
+            const input = document.getElementById('imageInput');
+            const chatMessages = document.getElementById('chatMessages');
+            
+            if (input.files.length > 0) {
+                const msg = document.createElement('div');
+                msg.className = 'message user-message';
+                msg.textContent = `📁 تم إرفاق ${input.files.length} صورة للدرس. جاري المعالجة...`;
+                chatMessages.appendChild(msg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // محاكاة رد البوت (لاحقاً سنربطه بالسيرفر الحقيقي)
+                setTimeout(() => {
+                    const botMsg = document.createElement('div');
+                    botMsg.className = 'message bot-message';
+                    botMsg.innerHTML = `✅ تم تحليل الصور بنجاح!<br><a href="#" style="color: #075e54; font-weight: bold;">📥 تحميل ملف الورد (Word)</a>`;
+                    chatMessages.appendChild(botMsg);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 2000);
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            if (input.value.trim() === '') return;
+            
+            const chatMessages = document.getElementById('chatMessages');
+            const msg = document.createElement('div');
+            msg.className = 'message user-message';
+            msg.textContent = input.value;
+            chatMessages.appendChild(msg);
+            
+            input.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
