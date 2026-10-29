@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, render_template, request, send_file, jsonify # type: ignore
 from werkzeug.utils import secure_filename # type: ignore
@@ -22,7 +21,7 @@ if not GEMINI_API_KEY:
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# استخدام نموذج ذكاء اصطناعي يدعم النصوص والصور
+# استخدام النموذج الذي اخترته من Google AI Studio
 model = genai.GenerativeModel('gemini-3.8-flash')
 
 # دور مساعد أستاذ الفيزياء
@@ -108,3 +107,4 @@ def download_file(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
+
