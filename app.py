@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, render_template, request, send_file, jsonify # type: ignore
 from werkzeug.utils import secure_filename # type: ignore
@@ -13,16 +12,17 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # تحديد أقصى حجم للملفات المرفوعة (16 ميجابايت)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# قراءة مفتاح Gemini API بأمان تام من ملف .env
+# قراءة مفتاح Gemini API بأمان تام من ملف .env أو بيئة العمل
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
-    raise ValueError("تحذير: لم يتم العثور على مفتاح GEMINI_API_KEY في ملف .env!")
+    raise ValueError("تحذير: لم يتم العثور على مفتاح GEMINI_API_KEY!")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# استخدام نموذج ذكاء اصطناعي يدعم النصوص والصور
+# استخدام النموذج الذي اخترته من Google AI Studio
 model = genai.GenerativeModel('gemini-3.8-flash')
 
 # دور مساعد أستاذ الفيزياء
@@ -41,29 +41,30 @@ def home():
 
 @app.route('/process', methods=['POST'])
 def process():
-    user_text = request.form.get('prompt', '')
-    export_format = request.form.get('format', 'docx')  # docx أو pdf
-    files = request.files.getlist('images')
-    
-    img_parts = []
-    for file in files:
-        if file and file.filename != '':
-            filename = secure_filename(file.filename)
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(path)
-            
-            with open(path, 'rb') as f:
-                img_parts.append({
-                    'mime_type': file.mimetype,
-                    'data': f.read()
-                })
-
-    prompt = f"{PHYSICS_TEACHER_ROLE}\n\nتعليمات الأستاذ وتوجيهاته: {user_text if user_text else 'قم بتحليل محتوى المرفقات وقدم شرحاً فيزيائياً ودرساً منظماً.'}"
-    contents = [prompt] + img_parts
-
     try:
+        user_text = request.form.get('prompt', '')
+        export_format = request.form.get('format', 'docx')  # docx أو pdf
+        files = request.files.getlist('images')
+        
+        img_parts = []
+        for file in files:
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(path)
+                
+                with open(path, 'rb') as f:
+                    img_parts.append({
+                        'mime_type': file.mimetype,
+                        'data': f.read()
+                    })
+
+        prompt = f"{PHYSICS_TEACHER_ROLE}\n\nتعليمات الأستاذ وتوجيهاته: {user_text if user_text else 'قم بتحليل محتوى المرفقات وقدم شرحاً فيزيائياً ودرساً منظماً.'}"
+        contents = [prompt] + img_parts if img_parts else [prompt]
+
+        # إرسال الطلب إلى النموذج مع معالجة الأخطاء
         response = model.generate_content(contents)
-        result_text = response.text
+        result_text = response.text if response and hasattr(response, 'text') else "عذراً، لم يتم استلام رد من النموذج."
 
         # تصدير الملف حسب رغبة الأستاذ (Word أو PDF)
         if export_format == 'pdf':
@@ -108,3 +109,6 @@ def download_file(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
+```eof
+
+
