@@ -12,18 +12,18 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # تحديد أقصى حجم للملفات المرفوعة (16 ميجابايت)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # أقصى حجم للملفات 16 ميجابايت
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# قراءة مفتاح Gemini API بأمان تام من ملف .env أو بيئة العمل
+# قراءة مفتاح Gemini API بأمان تام
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
-    raise ValueError("تحذير: لم يتم العثور على مفتاح GEMINI_API_KEY!")
+    raise ValueError("تحذير: لم يتم العثور على مفتاح GEMINI_API_KEY في متغيرات البيئة!")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# استخدام النموذج الذي اخترته من Google AI Studio
-model = genai.GenerativeModel('gemini-3.8-flash')
+# استخدام النموذج المعتمد
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # دور مساعد أستاذ الفيزياء
 PHYSICS_TEACHER_ROLE = """
@@ -43,7 +43,7 @@ def home():
 def process():
     try:
         user_text = request.form.get('prompt', '')
-        export_format = request.form.get('format', 'docx')  # docx أو pdf
+        export_format = request.form.get('format', 'docx')
         files = request.files.getlist('images')
         
         img_parts = []
@@ -62,11 +62,9 @@ def process():
         prompt = f"{PHYSICS_TEACHER_ROLE}\n\nتعليمات الأستاذ وتوجيهاته: {user_text if user_text else 'قم بتحليل محتوى المرفقات وقدم شرحاً فيزيائياً ودرساً منظماً.'}"
         contents = [prompt] + img_parts if img_parts else [prompt]
 
-        # إرسال الطلب إلى النموذج مع معالجة الأخطاء
         response = model.generate_content(contents)
         result_text = response.text if response and hasattr(response, 'text') else "عذراً، لم يتم استلام رد من النموذج."
 
-        # تصدير الملف حسب رغبة الأستاذ (Word أو PDF)
         if export_format == 'pdf':
             file_name = 'physics_lesson.pdf'
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
@@ -109,6 +107,3 @@ def download_file(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
-```eof
-
-
