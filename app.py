@@ -1,29 +1,38 @@
+
 import os
 from flask import Flask, render_template, request, send_file, jsonify # type: ignore
 from werkzeug.utils import secure_filename # type: ignore
 import google.generativeai as genai # type: ignore
 from docx import Document # type: ignore
-from reportlab.lib.pagesizes import letter # type: ignore
-from reportlab.pdfgen import canvas # type: ignore
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from dotenv import load_dotenv
+
+# تحميل متغيرات البيئة من ملف .env الخفي
+load_dotenv()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# ضع مفتاح API الخاص بك هنا
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+# قراءة مفتاح Gemini API بأمان تام من ملف .env
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("تحذير: لم يتم العثور على مفتاح GEMINI_API_KEY في ملف .env!")
+
 genai.configure(api_key=GEMINI_API_KEY)
 
 # استخدام نموذج ذكاء اصطناعي يدعم النصوص والصور
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-3.8-flash')
 
-SYSTEM_PROMPT = """
-أنت مساعد تعليمي ذكي مخصص لدعم المعلمين والأطباء الأكاديميين.
-مهامك الرئيسية:
-1. تحويل الصور والمستندات المرفوعة إلى دروس مرتبة أو ملخصات.
-2. إنشاء اختبارات وتدريبات (أسئلة متعددة الخيارات، صح/خطأ، أسئلة مقالية) بناءً على طلب الأستاذ.
-3. التعديل على الدروس والأسئلة وحفظ المخرجات في ملفات قابلة للتحميل.
-اجعل إجاباتك دائماً منسقة، واضحة، باللغة العربية الفصحى وبأسلوب تربوي ممتاز.
+# دور مساعد أستاذ الفيزياء
+PHYSICS_TEACHER_ROLE = """
+أنت "مساعد أستاذ الفيزياء الذكي"، خبير تربوي ومختص في تدريس وتبسيط مادة الفيزياء والكيمياء للمراحل التعليمية المختلفة.
+مهامك ودورك الأساسي:
+1. تحليل صور التجارب العلمية، المسائل الفيزيائية، أو الملفات المرفوعة وشرحها بطريقة تربوية مبسطة.
+2. مساعدة المعلم في صياغة وابتكار دروس فيزيائية، تجارب عملية، وتعديلها وفقاً لتعليمات الأستاذ.
+3. إعداد واقتراح أسئلة اختبارات (مسائل حسابية، أسئلة فهم وتحليل، صح وخطأ، اختيار من متعدد) مع نموذج الحل والتوجيهات.
+4. الرد بأسلوب علمي دقيق، منسق، وواضح باللغة العربية.
 """
 
 @app.route('/')
@@ -33,6 +42,7 @@ def home():
 @app.route('/process', methods=['POST'])
 def process():
     user_text = request.form.get('prompt', '')
+    export_format = request.form.get('format', 'docx')  # docx أو pdf
     files = request.files.getlist('images')
     
     img_parts = []
@@ -42,41 +52,57 @@ def process():
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
             
-            # قراءة الملفات لإرسالها لـ Gemini
             with open(path, 'rb') as f:
                 img_parts.append({
                     'mime_type': file.mimetype,
                     'data': f.read()
                 })
 
-    # بناء طلب المعالجة للذكاء الاصطناعي
-    prompt = f"{SYSTEM_PROMPT}\n\nطلب الأستاذ: {user_text if user_text else 'قم بتحليل واستخراج محتوى الصور وتلخيصه كدرس مرتب.'}"
+    prompt = f"{PHYSICS_TEACHER_ROLE}\n\nتعليمات الأستاذ وتوجيهاته: {user_text if user_text else 'قم بتحليل محتوى المرفقات وقدم شرحاً فيزيائياً ودرساً منظماً.'}"
     contents = [prompt] + img_parts
 
     try:
         response = model.generate_content(contents)
         result_text = response.text
 
-        # إنشاء ملف Word يحتوي على النتيجة
-        doc = Document()
-        doc.add_heading('مساعد الأستاذ - المخرجات', level=1)
-        for line in result_text.split('\n'):
-            doc.add_paragraph(line)
+        # تصدير الملف حسب رغبة الأستاذ (Word أو PDF)
+        if export_format == 'pdf':
+            file_name = 'physics_lesson.pdf'
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
             
-        doc_filename = 'output_lesson.docx'
-        doc_path = os.path.join(app.config['UPLOAD_FOLDER'], doc_filename)
-        doc.save(doc_path)
+            c = canvas.Canvas(file_path, pagesize=letter)
+            width, height = letter
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(50, height - 50, "Physics Teacher Assistant - Output")
+            
+            c.setFont("Helvetica", 10)
+            text_y = height - 80
+            for line in result_text.split('\n'):
+                if text_y < 50:
+                    c.showPage()
+                    text_y = height - 50
+                c.drawString(50, text_y, line[:95])
+                text_y -= 15
+            c.save()
+        else:
+            file_name = 'physics_lesson.docx'
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_name)
+            doc = Document()
+            doc.add_heading('مساعد أستاذ الفيزياء - مخرجات الدرس', level=1)
+            for line in result_text.split('\n'):
+                doc.add_paragraph(line)
+            doc.save(file_path)
 
         return jsonify({
             'status': 'success',
             'response': result_text,
-            'word_url': f'/download/{doc_filename}'
+            'download_url': f'/download/{file_name}'
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/download/<filename>')
-def download(filename):
+def download_file(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     return send_file(file_path, as_attachment=True)
 

@@ -1,3 +1,4 @@
+ html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -16,8 +17,8 @@
         }
         .chat-container {
             width: 100%;
-            max-width: 400px;
-            height: 90vh;
+            max-width: 450px;
+            height: 92vh;
             background: #f0f0f0;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -31,7 +32,7 @@
             padding: 15px;
             text-align: center;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 16px;
         }
         .chat-messages {
             flex: 1;
@@ -42,11 +43,11 @@
             gap: 10px;
         }
         .message {
-            max-width: 80%;
+            max-width: 85%;
             padding: 10px 15px;
             border-radius: 10px;
             font-size: 14px;
-            line-height: 1.4;
+            line-height: 1.5;
         }
         .bot-message {
             background: white;
@@ -64,9 +65,14 @@
             background: #f0f0f0;
             padding: 10px;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
             border-top: 1px solid #ddd;
+        }
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .chat-input-area input[type="text"] {
             flex: 1;
@@ -82,65 +88,132 @@
             cursor: pointer;
             font-size: 20px;
         }
+        .file-indicator {
+            font-size: 12px;
+            color: #075e54;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
     <div class="chat-container">
         <div class="chat-header">
-            🤖 مساعد الأستاذ الذكي (Gemini)
+            🤖 مساعد الأستاذ الذكي (Gemini الفيزياء)
         </div>
         
         <div class="chat-messages" id="chatMessages">
             <div class="message bot-message">
-                مرحباً أستاذ! أرسل لي صور الدرس وسأقوم بتحويلها وترتيبها إلى ملفات Word و PDF فوراً.
+                مرحباً أستاذي الفاضل! أرسل لي صور الدرس أو توجيهاتك وسأقوم بمعالجتها وتقديم الشرح مع تصدير ملفات Word و PDF فوراً.
             </div>
         </div>
 
         <div class="chat-input-area">
-            <!-- زر إرفاق الصور -->
-            <input type="file" id="imageInput" multiple accept="image/*" style="display: none;" onchange="handleImages()">
-            <button class="action-btn" onclick="document.getElementById('imageInput').click()" title="إرفاق صور">📎</button>
-            
-            <input type="text" id="userInput" placeholder="اكتب تعليقاً أو أرسل الصور...">
-            <button class="action-btn" onclick="sendMessage()" title="إرسال">إرسال ➔</button>
+            <div id="fileStatus" class="file-indicator"></div>
+            <div class="input-row">
+                <!-- زر إرفاق الصور والملفات -->
+                <input type="file" id="imageInput" multiple accept="image/*,.pdf" style="display: none;" onchange="showFileCount()">
+                <button class="action-btn" onclick="document.getElementById('imageInput').click()" title="إرفاق صور/ملفات">📎</button>
+                
+                <input type="text" id="userInput" placeholder="اكتب تعليماتك للأستاذ الذكي...">
+                <button class="action-btn" onclick="sendDataToPython()" title="إرسال">إرسال ➔</button>
+            </div>
         </div>
     </div>
 
     <script>
-        function handleImages() {
-            const input = document.getElementById('imageInput');
-            const chatMessages = document.getElementById('chatMessages');
-            
-            if (input.files.length > 0) {
-                const msg = document.createElement('div');
-                msg.className = 'message user-message';
-                msg.textContent = `📁 تم إرفاق ${input.files.length} صورة للدرس. جاري المعالجة...`;
-                chatMessages.appendChild(msg);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+        let selectedFiles = [];
 
-                // محاكاة رد البوت (لاحقاً سنربطه بالسيرفر الحقيقي)
-                setTimeout(() => {
-                    const botMsg = document.createElement('div');
-                    botMsg.className = 'message bot-message';
-                    botMsg.innerHTML = `✅ تم تحليل الصور بنجاح!<br><a href="#" style="color: #075e54; font-weight: bold;">📥 تحميل ملف الورد (Word)</a>`;
-                    chatMessages.appendChild(botMsg);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 2000);
+        function showFileCount() {
+            const input = document.getElementById('imageInput');
+            const statusDiv = document.getElementById('fileStatus');
+            if (input.files.length > 0) {
+                statusDiv.textContent = `📁 تم اختيار ${input.files.length} ملف/صورة جاهزة للإرسال`;
+            } else {
+                statusDiv.textContent = '';
             }
         }
 
-        function sendMessage() {
+        async function sendDataToPython() {
             const input = document.getElementById('userInput');
-            if (input.value.trim() === '') return;
-            
+            const fileInput = document.getElementById('imageInput');
             const chatMessages = document.getElementById('chatMessages');
-            const msg = document.createElement('div');
-            msg.className = 'message user-message';
-            msg.textContent = input.value;
-            chatMessages.appendChild(msg);
             
+            const textVal = input.value.trim();
+            const filesVal = fileInput.files;
+
+            if (!textVal && filesVal.length === 0) return;
+
+            // عرض رسالة المستخدم في الشات
+            if (textVal) {
+                const userMsg = document.createElement('div');
+                userMsg.className = 'message user-message';
+                userMsg.textContent = textVal;
+                chatMessages.appendChild(userMsg);
+            }
+            if (filesVal.length > 0) {
+                const fileMsg = document.createElement('div');
+                fileMsg.className = 'message user-message';
+                fileMsg.textContent = `📁 [مرفقات: ${filesVal.length} ملف]`;
+                chatMessages.appendChild(fileMsg);
+            }
+
+            // تفريغ الحقول
             input.value = '';
+            document.getElementById('fileStatus').textContent = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // رسالة الانتظار
+            const loadingMsg = document.createElement('div');
+            loadingMsg.className = 'message bot-message';
+            loadingMsg.id = 'loadingMsg';
+            loadingMsg.textContent = '⏳ جاري تحليل الدرس وإعداد الملفات بواسطة Gemini...';
+            chatMessages.appendChild(loadingMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // تجهيز البيانات للإرسال إلى Flask (/process)
+            const formData = new FormData();
+            formData.append('prompt', textVal);
+            for (let i = 0; i < filesVal.length; i++) {
+                formData.append('images', filesVal[i]);
+            }
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                document.getElementById('loadingMsg').remove();
+
+                if (data.status === 'success') {
+                    const botMsg = document.createElement('div');
+                    botMsg.className = 'message bot-message';
+                    botMsg.innerHTML = `
+                        <div>${data.response.replace(/\n/g, '<br>')}</div>
+                        <hr style="margin: 8px 0;">
+                        <a href="${data.download_url}" style="color: #075e54; font-weight: bold; text-decoration: none;" download>📥 تحميل الملف الجاهز (Word)</a>
+                    `;
+                    chatMessages.appendChild(botMsg);
+                } else {
+                    const errMsg = document.createElement('div');
+                    errMsg.className = 'message bot-message';
+                    errMsg.style.color = 'red';
+                    errMsg.textContent = '❌ حدث خطأ: ' + data.message;
+                    chatMessages.appendChild(errMsg);
+                }
+            } catch (err) {
+                document.getElementById('loadingMsg').remove();
+                const netErr = document.createElement('div');
+                netErr.className = 'message bot-message';
+                netErr.style.color = 'red';
+                netErr.textContent = '❌ فشل الاتصال بالسيرفر المحلي!';
+                chatMessages.appendChild(netErr);
+            }
+
+            // إعادة تعيين حقل الملفات
+            fileInput.value = '';
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
     </script>
