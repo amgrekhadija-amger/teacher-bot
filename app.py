@@ -7,6 +7,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from dotenv import load_dotenv
 
+# تحميل متغيرات البيئة
 load_dotenv()
 
 app = Flask(__name__)
@@ -20,8 +21,8 @@ if not GEMINI_API_KEY:
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# استخدام النموذج المستقر والمعتمد للصور والنصوص
-model = genai.GenerativeModel('gemini-1.5-flash')
+# استخدام النموذج المدعم للجيل الحالي
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 PHYSICS_TEACHER_ROLE = """
 أنت "مساعد أستاذ الفيزياء الذكي"، خبير تربوي ومختص في تدريس وتبسيط مادة الفيزياء والكيمياء للمراحل التعليمية المختلفة.
@@ -104,4 +105,13 @@ def download_file(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
- 
+```eof
+
+### خطوات التنفيذ:
+1. استبدل محتوى ملف `app.py` في جهازك بالكود أعلاه.
+2. ارفع التعديل إلى GitHub بالأوامر المعتادة:
+   
+```bash
+   git add app.py
+   git commit -m "Update to gemini-2.5-flash model"
+   git push origin main
